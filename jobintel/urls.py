@@ -30,5 +30,6 @@ urlpatterns = [
     path('gmail/', include('gmail_sync.urls')),
     path('intelligence/', include('intelligence.urls')),
     path("", include("jobs.urls")),
+    path("", include("followups.urls")),
 
 ]

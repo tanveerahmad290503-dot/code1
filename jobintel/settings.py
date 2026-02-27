@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'gmail_sync',
     'jobs',
     'intelligence',
+    'followups',
 ]
 
 MIDDLEWARE = [
