@@ -69,4 +69,120 @@
 
 </div>
 
+
+<!-- FOLLOW-UP GENERATOR -->
+<div class="bg-neutral-900 rounded-2xl p-6 mt-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-medium">Follow-up Draft</h2>
+        <button id="generateFollowupBtn"
+                class="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 transition text-sm">
+            Generate Follow-up
+        </button>
+    </div>
+
+    <div id="followupSection" class="hidden">
+
+        <input type="hidden" id="followupCsrfToken" value="{{ csrf_token }}">
+        <textarea id="followupTextarea"
+                  rows="12"
+                  class="w-full bg-neutral-800 text-neutral-100 rounded-xl p-4 border border-neutral-700 focus:outline-none focus:border-neutral-500"></textarea>
+
+        <div class="flex items-center gap-3 mt-4">
+            <button id="copyFollowupBtn"
+                    class="px-4 py-2 rounded-xl bg-neutral-700 hover:bg-neutral-600 transition text-sm">
+                Copy Mail
+            </button>
+
+            <button id="improveFollowupBtn"
+                    class="px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 transition text-sm">
+                Improve Using AI
+            </button>
+
+            <span id="followupStatus" class="text-sm text-neutral-400"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const threadId = "{{ thread.id }}";
+    const generateBtn = document.getElementById("generateFollowupBtn");
+    const section = document.getElementById("followupSection");
+    const textarea = document.getElementById("followupTextarea");
+    const copyBtn = document.getElementById("copyFollowupBtn");
+    const improveBtn = document.getElementById("improveFollowupBtn");
+    const statusEl = document.getElementById("followupStatus");
+
+    function setStatus(message, isError) {
+        statusEl.textContent = message || "";
+        statusEl.className = isError ? "text-sm text-red-400" : "text-sm text-neutral-400";
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return "";
+    }
+
+    generateBtn.addEventListener("click", async function () {
+        setStatus("Generating draft...", false);
+        try {
+            const response = await fetch(`/thread/${threadId}/generate/`, {
+                method: "GET",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to generate follow-up.");
+            }
+
+            const data = await response.json();
+            textarea.value = data.message || "";
+            section.classList.remove("hidden");
+            setStatus("Draft generated.", false);
+        } catch (error) {
+            setStatus(error.message || "Unable to generate.", true);
+        }
+    });
+
+    copyBtn.addEventListener("click", async function () {
+        try {
+            await navigator.clipboard.writeText(textarea.value || "");
+            setStatus("Draft copied to clipboard.", false);
+        } catch (error) {
+            setStatus("Clipboard copy failed.", true);
+        }
+    });
+
+    improveBtn.addEventListener("click", async function () {
+        setStatus("Improving draft with AI...", false);
+        try {
+            const response = await fetch(`/thread/${threadId}/improve/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.getElementById("followupCsrfToken").value || getCookie("csrftoken"),
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({ draft: textarea.value || "" })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.detail || "Unable to improve follow-up.");
+            }
+
+            const data = await response.json();
+            textarea.value = data.message || textarea.value;
+            setStatus("Draft improved.", false);
+        } catch (error) {
+            setStatus(error.message || "AI improvement failed.", true);
+        }
+    });
+})();
+</script>
+
 {% endblock %}
